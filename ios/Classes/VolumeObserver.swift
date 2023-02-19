@@ -42,10 +42,9 @@ public class VolumeObserver {
 
 public class VolumeListener: NSObject, FlutterStreamHandler {
     private let audioSession: AVAudioSession = AVAudioSession.sharedInstance()
-    private let notification: NotificationCenter = NotificationCenter.default
     private var eventSink: FlutterEventSink?
-    private var isObserving: Bool = false
     private let volumeKey: String = "outputVolume"
+    private var outputVolumeObservation: NSKeyValueObservation?
 
 
     public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
@@ -65,44 +64,27 @@ public class VolumeListener: NSObject, FlutterStreamHandler {
 
     private func registerVolumeObserver() {
         audioSessionObserver()
-        notification.addObserver(
-            self,
-            selector: #selector(audioSessionObserver),
-            name: UIApplication.didBecomeActiveNotification,
-            object: nil)
     }
 
     @objc func audioSessionObserver(){
         do {
             try audioSession.setCategory(AVAudioSession.Category.playback)
+        } catch {
+            print("Fail to set category: \(error)")
+        }
+        
+        do {
+            
             try audioSession.setActive(true)
-            if !isObserving {
-                audioSession.addObserver(self,
-                                         forKeyPath: volumeKey,
-                                         options: .new,
-                                         context: nil)
-                isObserving = true
+            outputVolumeObservation = audioSession.observe(\.outputVolume) { audioSession, _ in
+                self.eventSink?(audioSession.outputVolume);
             }
         } catch {
-            print("Volume Controller Listener occurred error.")
+            print("Volume Controller Listener occurred error: \(error)")
         }
     }
 
     private func removeVolumeObserver() {
-        audioSession.removeObserver(self,
-                                    forKeyPath: volumeKey)
-        notification.removeObserver(self,
-                                    name: UIApplication.didBecomeActiveNotification,
-                                    object: nil)
-        isObserving = false
-    }
-
-    override public func observeValue(forKeyPath keyPath: String?,
-                                      of object: Any?,
-                                      change: [NSKeyValueChangeKey: Any]?,
-                                      context: UnsafeMutableRawPointer?) {
-        if keyPath == volumeKey {
-            eventSink?(audioSession.outputVolume)
-        }
+        outputVolumeObservation = nil
     }
 }
