@@ -67,6 +67,5 @@ public class VolumeListener: NSObject, FlutterStreamHandler {
 
     private func removeVolumeObserver() {
         outputVolumeObservation = nil
-        try! AVAudioSession.sharedInstance().setActive(false)
     }
 }
