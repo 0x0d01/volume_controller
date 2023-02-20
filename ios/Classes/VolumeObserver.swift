@@ -14,13 +14,7 @@ import UIKit
 
 public class VolumeObserver {
     public func getVolume() -> Float? {
-        let audioSession: AVAudioSession = AVAudioSession.sharedInstance()
-        do {
-            try audioSession.setActive(true)
-            return audioSession.outputVolume
-        } catch let _ {
-            return nil
-        }
+        return AVAudioSession.sharedInstance().outputVolume
     }
 
     public func setVolume(volume:Float, showSystemUI: Bool) {
@@ -41,7 +35,6 @@ public class VolumeObserver {
 }
 
 public class VolumeListener: NSObject, FlutterStreamHandler {
-    private let audioSession: AVAudioSession = AVAudioSession.sharedInstance()
     private var eventSink: FlutterEventSink?
     private let volumeKey: String = "outputVolume"
     private var outputVolumeObservation: NSKeyValueObservation?
@@ -50,7 +43,7 @@ public class VolumeListener: NSObject, FlutterStreamHandler {
     public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
         eventSink = events
         registerVolumeObserver()
-        eventSink?(audioSession.outputVolume)
+        eventSink?(AVAudioSession.sharedInstance().outputVolume)
 
         return nil
     }
@@ -67,24 +60,13 @@ public class VolumeListener: NSObject, FlutterStreamHandler {
     }
 
     @objc func audioSessionObserver(){
-        do {
-            try audioSession.setCategory(AVAudioSession.Category.playback)
-        } catch {
-            print("Fail to set category: \(error)")
-        }
-        
-        do {
-            
-            try audioSession.setActive(true)
-            outputVolumeObservation = audioSession.observe(\.outputVolume) { audioSession, _ in
-                self.eventSink?(audioSession.outputVolume);
-            }
-        } catch {
-            print("Volume Controller Listener occurred error: \(error)")
+        outputVolumeObservation = AVAudioSession.sharedInstance().observe(\.outputVolume) { audioSession, _ in
+            self.eventSink?(audioSession.outputVolume);
         }
     }
 
     private func removeVolumeObserver() {
         outputVolumeObservation = nil
+        try! AVAudioSession.sharedInstance().setActive(false)
     }
 }
